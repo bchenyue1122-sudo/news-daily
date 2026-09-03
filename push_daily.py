@@ -107,7 +107,10 @@ def main():
     args = ap.parse_args()
 
     cfg = yaml.safe_load((BASE_DIR / "config.yaml").read_text(encoding="utf-8"))
-    env = load_env(BASE_DIR / ".env")
+    # .env 文件值会 setdefault 进 os.environ（不覆盖已有变量）；
+    # GitHub Actions 的 Secrets 以进程环境变量注入，因此统一从 os.environ 读
+    load_env(BASE_DIR / ".env")
+    env = os.environ
 
     fetchers.configure(cfg.get("dailyhot_instances"), cfg.get("sixty_instances"))
 
