@@ -98,6 +98,7 @@ python push_daily.py --force      # 忽略去重强制再推一条
 | 现象 | 处理 |
 |---|---|
 | 微信收不到 | 跑 `python push_daily.py --force` 看终端报错；`errcode 40001`=appsecret 错；`43004`=openid 错（须是关注了测试号的那个）；`40037`=模板 ID 错 |
+| Actions 报"缺少微信配置" | 本地 `.env` 不会上传到 GitHub（防泄露）。必须把 6 个值加到仓库 **Settings → Secrets and variables → Actions → Repository secrets**（名字必须完全一致：`WX_APPID`/`WX_SECRET`/`WX_OPENID`/`WX_TEMPLATE_ID`/`GH_REPO`/`PAGES_URL`；注意是 Repository secrets，不是 Environment secrets） |
 | 卡片点击打不开 | Pages 没开好，或 PAGES_URL 填错。浏览器直接访问 `PAGES_URL/当天日期.html` 验证 |
 | 某版块显示"暂不可用" | 该源所有兜底通道都挂了，不影响其他版块；长期挂可换源或关闭 |
 | 收到两条 | 两个触发端同时跑的竞态（正常不会，间隔 10 分钟）；多发无害，可忽略 |

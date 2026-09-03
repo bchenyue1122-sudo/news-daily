@@ -161,7 +161,8 @@ def main():
     # 5. 发布（git push → Pages 自动部署）
     if not args.no_git:
         if not repo:
-            log("⚠️ 未配置 GH_REPO，跳过 git 发布（卡片将没有可跳转的日报页）。")
+            log("⚠️ 未配置 GH_REPO（本地看 .env，云端看仓库 Secrets），跳过 git 发布"
+                "（卡片将没有可跳转的日报页）。")
         else:
             ok, msg = publish_git(date_str, branch)
             log(("✅ 已发布到 GitHub" if ok else f"⚠️ 发布失败：{msg}"))
@@ -170,7 +171,11 @@ def main():
     need = ["WX_APPID", "WX_SECRET", "WX_OPENID", "WX_TEMPLATE_ID"]
     missing = [k for k in need if not env.get(k)]
     if missing:
-        log(f"❌ 缺少微信配置: {', '.join(missing)}（请填写 .env）。")
+        where = ("GitHub Actions 运行：请到仓库 Settings → Secrets and variables → "
+                 "Actions 添加 Repository secrets（本地 .env 不会上传，云端只认 Secrets）"
+                 if os.environ.get("GITHUB_ACTIONS")
+                 else "请把 .env.example 复制为 .env 并填写")
+        log(f"❌ 缺少微信配置: {', '.join(missing)}（{where}）。")
         return 1
     card_url = f"{pages_url}/{date_str}.html" if pages_url else ""
     if not pages_url:
