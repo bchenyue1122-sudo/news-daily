@@ -1,0 +1,39 @@
+name: daily-push
+
+on:
+  schedule:
+    # UTC 00:10 = 北京时间 08:10（备用触发；本地 08:00 已推送成功则此处自动跳过）
+    - cron: "10 0 * * *"
+  workflow_dispatch: {}   # 支持在 Actions 页面手动触发，用于联调
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-push
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 抓取 → 发布 Pages → 推送微信
+        env:
+          WX_APPID: ${{ secrets.WX_APPID }}
+          WX_SECRET: ${{ secrets.WX_SECRET }}
+          WX_OPENID: ${{ secrets.WX_OPENID }}
+          WX_TEMPLATE_ID: ${{ secrets.WX_TEMPLATE_ID }}
+          GH_REPO: ${{ secrets.GH_REPO }}
+          PAGES_URL: ${{ secrets.PAGES_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python push_daily.py

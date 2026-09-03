@@ -1,0 +1,92 @@
+# ============================================================
+# 每日热点日报 配置文件
+# 改完保存即可，下次运行（本地或 GitHub Actions）自动生效
+# ============================================================
+
+# 时区（用于"今天"的判定与日报标题）
+timezone: Asia/Shanghai
+
+# 各数据源：enabled 开关 / top_n 取前几条 / tag 用于微信卡片摘要里的【标签】
+sources:
+  # ---------- 国内热点 ----------
+  yaowen:            # 每天60秒读懂世界（国内要闻速览，纯文本无链接）
+    enabled: true
+    top_n: 6
+    tag: 要闻
+  weibo:             # 微博热搜
+    enabled: true
+    top_n: 10
+    tag: 微博
+  zhihu:             # 知乎热榜
+    enabled: true
+    top_n: 10
+    tag: 知乎
+  baidu:             # 百度热搜
+    enabled: true
+    top_n: 10
+    tag: 百度
+  douyin:            # 抖音热点（默认关，想看改 true）
+    enabled: false
+    top_n: 10
+    tag: 抖音
+  bilibili:          # B站热榜（默认关，想看改 true）
+    enabled: false
+    top_n: 10
+    tag: B站
+  wechat_hot:        # 微信 24h 热文榜（点开直接是公众号文章）
+    enabled: true
+    top_n: 8
+    tag: 微信热文
+
+  # ---------- AI 圈热点 ----------
+  qbitai:            # 量子位（官方 RSS）
+    enabled: true
+    top_n: 8
+    tag: 量子位
+  aibase:            # AIbase AI 日报（中文）
+    enabled: true
+    top_n: 8
+    tag: AI快讯
+  kr36:              # 36氪热榜（科技/AI 向）
+    enabled: true
+    top_n: 8
+    tag: 36氪
+  hf_papers:         # HuggingFace 热门论文
+    enabled: true
+    top_n: 5
+    tag: HF论文
+  github_trending:   # GitHub Trending（倾向筛选 AI 相关仓库）
+    enabled: true
+    top_n: 5
+    tag: GitHub
+  jiqizhixin:        # 机器之心（依赖海外聚合实例，国内不稳，默认关）
+    enabled: false
+    top_n: 8
+    tag: 机器之心
+
+# DailyHotApi 公共实例（兜底聚合源，自上而下依次尝试）
+dailyhot_instances:
+  - https://api-hot.imsyy.top
+
+# 60s API 公共实例（国内要闻/微博兜底）
+sixty_instances:
+  - https://60s.b23.run
+  - https://60s.viki.moe
+
+# 微信卡片摘要的排版参数
+digest:
+  # 每个版块在卡片里展示几条
+  items_per_section: 3
+  # 单条标题最多截断多少字
+  max_title_chars: 20
+  # 摘要总字数上限（模板消息安全长度）
+  max_chars: 480
+
+# GitHub 发布 / 去重（gh_repo 填 "用户名/仓库名"，本地跑也用于查重与git推送目标）
+publish:
+  gh_repo: ""          # 例: zhangsan/news-daily
+  branch: main
+  docs_dir: docs
+  # GitHub Pages 首页（开好 Pages 后填，例: https://zhangsan.github.io/news-daily/）
+  # 微信卡片"点击查看完整日报"会跳到 pages_url + 当日文件名
+  pages_url: ""
