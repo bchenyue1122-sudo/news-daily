@@ -89,6 +89,11 @@ def publish_git(date_str, branch):
         return subprocess.run(["git", *args], cwd=BASE_DIR, capture_output=True,
                               text=True, encoding="utf-8", errors="replace")
 
+    # Actions 的 checkout 环境没有 git 身份，未配置时用机器人身份补上
+    if not run("config", "user.email").stdout.strip():
+        run("config", "user.name", "news-daily-bot")
+        run("config", "user.email", "news-daily-bot@users.noreply.github.com")
+
     run("add", "docs")
     commit = run("commit", "-m", f"daily {date_str}")
     if commit.returncode != 0 and "nothing to commit" not in commit.stdout:
