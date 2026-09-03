@@ -9,9 +9,9 @@ timezone: Asia/Shanghai
 # 各数据源：enabled 开关 / top_n 取前几条 / tag 用于微信卡片摘要里的【标签】
 sources:
   # ---------- 国内热点 ----------
-  yaowen:            # 每天60秒读懂世界（国内要闻速览，纯文本无链接）
+  yaowen:            # 每天60秒读懂世界（国内要闻速览，每天固定15条，纯文本无链接）
     enabled: true
-    top_n: 6
+    top_n: 15
     tag: 要闻
   weibo:             # 微博热搜
     enabled: true
