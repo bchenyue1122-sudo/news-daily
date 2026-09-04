@@ -1,17 +1,22 @@
-# 每日热点早报（国内新闻 + AI 圈 → 微信测试号）
+# 每日热点日报（国内新闻 + AI 快报 → 微信测试号，两条独立推送）
 
-每天早上 8:00 自动聚合国内热点（要闻/微博/知乎/百度/微信热文）和 AI 圈热点（量子位/AIbase/36氪/HF 论文/GitHub Trending），生成日报网页并推送到你的微信（公众号测试号卡片消息，点开可看全文）。
+每天早上 8:00 推送**两条**微信消息：
+
+- **📰 国内新闻日报**：要闻(60s)/微博/知乎/百度/今日头条/微信热文/IT之家/少数派/36氪（抖音、B站可开）→ `日期-news.html`
+- **🤖 每日AI快报**：量子位/AIbase/大厂官博(OpenAI·Anthropic·DeepMind·HF)/HF论文/开源模型发布(DeepSeek·智谱·通义·Kimi)/厂商动态/Hacker News/Reddit/智源社区/掘金AI/GitHub Trending → `日期-ai.html`
+
+两条消息**独立模板、独立去重、独立发布**：某条失败时兜底触发端只补那一条；卡片点开是 GitHub Pages 上的完整日报页，所有条目可点原文。
 
 ```
-触发（二选一，自动去重）
- ├─ Windows 任务计划  每天 08:00 本机运行（主）
+触发（每条流水线独立去重）
+ ├─ Windows 任务计划  每天 08:00 本机运行（主；睡眠自动唤醒，错过开机补跑）
  └─ GitHub Actions    每天 08:10 云端运行（备用，电脑关机也发）
         ↓
- 抓取 13 个数据源（每个源有 2~4 条兜底通道，单源失败不影响整体）
+ 抓取 20+ 数据源（每个源多级兜底通道，单源失败标"暂不可用"不影响整体）
         ↓
- 生成日报 HTML → git push → GitHub Pages 上线（历史可回看）
+ 生成 日期-news.html / 日期-ai.html → git push → GitHub Pages 上线
         ↓
- 微信测试号模板消息 → 点击卡片打开当日完整日报
+ 微信测试号两条模板消息（国内/AI 各一条），点击卡片看对应全文
 ```
 
 ## 目录结构
@@ -65,7 +70,8 @@ run.bat              任务计划程序入口（日志写 logs/run.log）
    | `WX_APPID` | 测试号 appID |
    | `WX_SECRET` | 测试号 appsecret |
    | `WX_OPENID` | 你的 openid |
-   | `WX_TEMPLATE_ID` | 模板 ID |
+   | `WX_TEMPLATE_ID` | 国内日报模板 ID |
+   | `WX_TEMPLATE_ID_AI` | AI 快报模板 ID（新建"每日AI快报"模板） |
    | `GH_REPO` | `你的用户名/news-daily` |
    | `PAGES_URL` | `https://你的用户名.github.io/news-daily` |
 5. Actions 页 → 选 `daily-push` → Run workflow 手动触发一次，验证云端链路（Actions 用的 GITHUB_TOKEN 无需配置，自动注入）。
@@ -82,9 +88,17 @@ run.bat              任务计划程序入口（日志写 logs/run.log）
 
 ```bash
 python push_daily.py --dry-run    # 只抓取渲染，docs/ 本地预览，不发布不推送
-python push_daily.py              # 完整流程（有当日去重）
-python push_daily.py --force      # 忽略去重强制再推一条
+python push_daily.py              # 完整流程（国内+AI 两条，各自有当日去重）
+python push_daily.py --only ai    # 只跑 AI 流水线
+python push_daily.py --force      # 忽略去重强制再推
 ```
+
+## 自定义监控清单（config.yaml）
+
+- **大模型厂商动态**：`vendor_keywords` 里加减关键词（DeepSeek/智谱/Kimi/通义千问/豆包/文心一言…），走 360 资讯搜索抓相关报道
+- **开源模型发布**：`hf_orgs` 里加减 HuggingFace 组织名（deepseek-ai/THUDM/Qwen/moonshotai…），发新模型当天即可捕捉
+- **Reddit 子版**：`reddit_subs`（r/LocalLLaMA + r/MachineLearning）
+- 注意：Reddit 屏蔽云厂商 IP，GitHub Actions 兜底运行时该版块可能"暂不可用"，本机运行正常
 
 ## 日常调整（config.yaml）
 
