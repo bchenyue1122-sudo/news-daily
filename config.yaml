@@ -29,12 +29,12 @@ sources:
     enabled: true
     top_n: 10
     tag: 头条
-  douyin:            # 抖音热点（默认关，想看改 true）
-    enabled: false
+  douyin:            # 抖音热点
+    enabled: true
     top_n: 10
     tag: 抖音
-  bilibili:          # B站热榜（默认关，想看改 true）
-    enabled: false
+  bilibili:          # B站热榜
+    enabled: true
     top_n: 10
     tag: B站
   wechat_hot:        # 微信 24h 热文榜（点开直接是公众号文章）
