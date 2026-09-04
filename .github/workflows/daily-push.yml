@@ -33,6 +33,7 @@ jobs:
           WX_SECRET: ${{ secrets.WX_SECRET }}
           WX_OPENID: ${{ secrets.WX_OPENID }}
           WX_TEMPLATE_ID: ${{ secrets.WX_TEMPLATE_ID }}
+          WX_TEMPLATE_ID_AI: ${{ secrets.WX_TEMPLATE_ID_AI }}
           GH_REPO: ${{ secrets.GH_REPO }}
           PAGES_URL: ${{ secrets.PAGES_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

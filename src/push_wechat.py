@@ -38,14 +38,16 @@ def send_template(appid, secret, *, openid, template_id, url, data):
     return j
 
 
-def push_daily(appid, secret, openid, template_id, *, date_str, digest_text, url):
+def push_daily(appid, secret, openid, template_id, *, title, date_str,
+               digest_text, url):
     """按日报模板约定发送。模板内容参考 README：
         {{date.DATA}}
         {{digest.DATA}}
         点击本条消息查看完整日报
+    title 形如 "📰 国内新闻日报" / "🤖 每日AI快报"。
     """
     data = {
-        "date": {"value": f"{date_str} 每日热点早报", "color": "#173177"},
+        "date": {"value": f"{date_str} {title}", "color": "#173177"},
         "digest": {"value": digest_text, "color": "#333333"},
     }
     return send_template(appid, secret, openid=openid, template_id=template_id,

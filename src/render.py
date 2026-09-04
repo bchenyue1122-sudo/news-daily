@@ -7,18 +7,30 @@ WEEKDAY_CN = "一二三四五六日"
 
 # HTML 里各版块的中文名与 emoji
 SECTION_META = {
+    # 国内
     "yaowen": ("📰 国内要闻", "每天60秒读懂世界"),
     "weibo": ("🔥 微博热搜", "微博"),
     "zhihu": ("💬 知乎热榜", "知乎"),
     "baidu": ("🔍 百度热搜", "百度"),
+    "toutiao": ("📌 今日头条", "今日头条"),
     "douyin": ("🎵 抖音热点", "抖音"),
     "bilibili": ("📺 B站热榜", "哔哩哔哩"),
     "wechat_hot": ("💬 微信热文", "微信公众号"),
-    "jiqizhixin": ("🤖 机器之心", "机器之心"),
+    "ithome": ("🔌 IT之家", "IT之家"),
+    "sspai": ("🧰 少数派", "少数派"),
+    "kr36": ("🚀 36氪热榜", "36氪"),
+    # AI
     "qbitai": ("⚡ 量子位", "量子位"),
     "aibase": ("🛰️ AI 快讯", "AIbase"),
-    "kr36": ("🚀 36氪热榜", "36氪"),
+    "jiqizhixin": ("🤖 机器之心", "机器之心"),
+    "vendor_blogs": ("🏛️ 大厂官博", "OpenAI/Anthropic/DeepMind/HF"),
     "hf_papers": ("📄 HF 热门论文", "HuggingFace Daily Papers"),
+    "hf_releases": ("🚀 开源模型发布", "HuggingFace 模型库"),
+    "vendor_news": ("🏭 大模型厂商动态", "360资讯"),
+    "hn": ("🟠 Hacker News", "news.ycombinator.com"),
+    "reddit": ("👽 Reddit AI 社区", "reddit.com"),
+    "baai": ("🧠 智源社区", "hub.baai.ac.cn"),
+    "juejin_ai": ("⛏️ 掘金 AI 热文", "juejin.cn"),
     "github_trending": ("💻 GitHub Trending", "GitHub"),
 }
 
@@ -134,7 +146,7 @@ def _toc(sections):
     return f'<div class="nav"><h2>📖 本期导航</h2>{"".join(links)}</div>'
 
 
-def build_daily_html(sections, now, source_err_map=None):
+def build_daily_html(page_title, sections, now):
     date_str = now.strftime("%Y-%m-%d")
     weekday = f"星期{WEEKDAY_CN[now.weekday()]}"
     gen_time = now.strftime("%Y-%m-%d %H:%M")
@@ -154,13 +166,13 @@ def build_daily_html(sections, now, source_err_map=None):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>每日热点早报 · {date_str}</title>
+<title>{page_title} · {date_str}</title>
 <style>{_CSS}</style>
 </head>
 <body>
 <div class="wrap">
   <div class="head">
-    <h1>📰 每日热点早报</h1>
+    <h1>{page_title}</h1>
     <div class="sub">{date_str} {weekday} ｜ 生成于 {gen_time}</div>
   </div>
   {_toc(sections)}
@@ -171,27 +183,24 @@ def build_daily_html(sections, now, source_err_map=None):
 </html>"""
 
 
-def build_index_html(dates_desc, now):
-    """docs/index.html：最新一期置顶 + 历史归档列表。"""
+def build_index_html(entries, now):
+    """docs/index.html：归档列表。entries = [(显示文字, 链接文件名), ...]"""
     gen_time = now.strftime("%Y-%m-%d %H:%M")
-    rows = []
-    for i, d in enumerate(dates_desc):
-        first = ' style="font-weight:600"' if i == 0 else ""
-        rows.append(f'<li{first}><a href="{d}.html">{d}</a>'
-                    f'{"（最新）" if i == 0 else ""}</li>')
+    rows = [f'<li><a href="{htmllib.escape(href)}">{htmllib.escape(text)}</a></li>'
+            for text, href in entries]
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>每日热点早报 · 归档</title>
+<title>每日热点日报 · 归档</title>
 <style>{_CSS}</style>
 </head>
 <body>
 <div class="wrap">
   <div class="head">
-    <h1>📰 每日热点早报</h1>
-    <div class="sub">往期日报归档 ｜ 更新于 {gen_time}</div>
+    <h1>📰 每日热点日报</h1>
+    <div class="sub">往期归档（国内新闻 / AI 快报） ｜ 更新于 {gen_time}</div>
   </div>
   <div class="sec"><h2>🗂 日报列表</h2><ol>{"".join(rows)}</ol></div>
 </div>

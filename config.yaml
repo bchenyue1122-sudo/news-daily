@@ -8,7 +8,7 @@ timezone: Asia/Shanghai
 
 # 各数据源：enabled 开关 / top_n 取前几条 / tag 用于微信卡片摘要里的【标签】
 sources:
-  # ---------- 国内热点 ----------
+  # ---------- 国内新闻日报 ----------
   yaowen:            # 每天60秒读懂世界（国内要闻速览，每天固定15条，纯文本无链接）
     enabled: true
     top_n: 15
@@ -25,6 +25,10 @@ sources:
     enabled: true
     top_n: 10
     tag: 百度
+  toutiao:           # 今日头条热榜
+    enabled: true
+    top_n: 10
+    tag: 头条
   douyin:            # 抖音热点（默认关，想看改 true）
     enabled: false
     top_n: 10
@@ -37,8 +41,20 @@ sources:
     enabled: true
     top_n: 8
     tag: 微信热文
+  ithome:            # IT之家（数码科技资讯）
+    enabled: true
+    top_n: 8
+    tag: IT之家
+  sspai:             # 少数派（效率工具/数字生活）
+    enabled: true
+    top_n: 8
+    tag: 少数派
+  kr36:              # 36氪热榜（商业科技/创投）
+    enabled: true
+    top_n: 8
+    tag: 36氪
 
-  # ---------- AI 圈热点 ----------
+  # ---------- 每日 AI 快报 ----------
   qbitai:            # 量子位（官方 RSS）
     enabled: true
     top_n: 8
@@ -47,22 +63,67 @@ sources:
     enabled: true
     top_n: 8
     tag: AI快讯
-  kr36:              # 36氪热榜（科技/AI 向）
-    enabled: true
-    top_n: 8
-    tag: 36氪
-  hf_papers:         # HuggingFace 热门论文
-    enabled: true
-    top_n: 5
-    tag: HF论文
-  github_trending:   # GitHub Trending（倾向筛选 AI 相关仓库）
-    enabled: true
-    top_n: 5
-    tag: GitHub
   jiqizhixin:        # 机器之心（依赖海外聚合实例，国内不稳，默认关）
     enabled: false
     top_n: 8
     tag: 机器之心
+  vendor_blogs:      # 大厂官方博客（OpenAI/Anthropic/DeepMind/HuggingFace，多源合并）
+    enabled: true
+    top_n: 8
+    tag: 大厂官博
+  hf_papers:         # HuggingFace 热门论文
+    enabled: true
+    top_n: 5
+    tag: HF论文
+  hf_releases:       # 开源模型发布（HF 上 DeepSeek/智谱/通义/Kimi 等组织的新模型）
+    enabled: true
+    top_n: 8
+    tag: 模型发布
+  vendor_news:       # 大模型厂商动态（360资讯按 vendor_keywords 关键词抓取）
+    enabled: true
+    top_n: 8
+    tag: 厂商动态
+  hn:                # Hacker News 首页（全球技术社区）
+    enabled: true
+    top_n: 8
+    tag: HN
+  reddit:            # Reddit AI 社区（r/LocalLLaMA + r/MachineLearning）
+    enabled: true
+    top_n: 8
+    tag: Reddit
+  baai:              # 智源社区·最热
+    enabled: true
+    top_n: 8
+    tag: 智源
+  juejin_ai:         # 掘金·人工智能本周最热
+    enabled: true
+    top_n: 8
+    tag: 掘金AI
+  github_trending:   # GitHub Trending（倾向筛选 AI 相关仓库）
+    enabled: true
+    top_n: 5
+    tag: GitHub
+
+# ---- 大模型厂商动态（思路一：关键词资讯，360资讯搜索）----
+vendor_keywords:
+  - DeepSeek
+  - 智谱
+  - Kimi
+  - 通义千问
+  - 豆包
+  - 文心一言
+
+# ---- 开源模型发布（思路二：HF 组织监控）----
+hf_orgs:
+  - deepseek-ai      # DeepSeek
+  - THUDM            # 智谱 GLM
+  - Qwen             # 阿里通义
+  - moonshotai       # 月之暗面 Kimi
+
+# Reddit 订阅的子版
+reddit_subs:
+  - LocalLLaMA
+  - MachineLearning
 
 # DailyHotApi 公共实例（兜底聚合源，自上而下依次尝试）
 dailyhot_instances:
@@ -87,6 +148,6 @@ publish:
   gh_repo: ""          # 例: zhangsan/news-daily
   branch: main
   docs_dir: docs
-  # GitHub Pages 首页（开好 Pages 后填，例: https://zhangsan.github.io/news-daily/）
+  # GitHub Pages 首页（开好 Pages 后填，例: https://zhangsan.github.io/news-daily）
   # 微信卡片"点击查看完整日报"会跳到 pages_url + 当日文件名
   pages_url: ""

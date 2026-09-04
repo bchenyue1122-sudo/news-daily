@@ -4,7 +4,7 @@ import requests
 
 
 def already_pushed(repo, date_str, *, branch="main", docs_dir="docs", token=None):
-    """docs/<date>.html 在 GitHub 上已存在 → True。
+    """docs/<date_str>.html 在 GitHub 上已存在 → True（date_str 形如 2026-09-05-news）。
 
     网络异常时按 False 处理（宁可多发一条，不漏发）。
     """

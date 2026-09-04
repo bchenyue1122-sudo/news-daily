@@ -42,14 +42,30 @@ def _get(url, *, headers=None, timeout=TIMEOUT, retries=1, params=None):
 _SETTINGS = {
     "dailyhot_instances": ["https://api-hot.imsyy.top"],
     "sixty_instances": ["https://60s.b23.run", "https://60s.viki.moe"],
+    "vendor_keywords": ["DeepSeek", "智谱", "Kimi", "通义千问", "豆包", "文心一言"],
+    "hf_orgs": ["deepseek-ai", "THUDM", "Qwen", "moonshotai"],
+    "reddit_subs": ["LocalLLaMA", "MachineLearning"],
+    "vendor_blogs": [
+        ("OpenAI", "https://openai.com/news/rss.xml"),
+        ("Anthropic", "https://rsshub.rssforever.com/anthropic/news"),
+        ("DeepMind", "https://deepmind.google/blog/rss.xml"),
+        ("HuggingFace", "https://huggingface.co/blog/feed.xml"),
+    ],
 }
 
 
-def configure(dailyhot_instances, sixty_instances):
+def configure(dailyhot_instances=None, sixty_instances=None, vendor_keywords=None,
+              hf_orgs=None, reddit_subs=None):
     if dailyhot_instances:
         _SETTINGS["dailyhot_instances"] = dailyhot_instances
     if sixty_instances:
         _SETTINGS["sixty_instances"] = sixty_instances
+    if vendor_keywords:
+        _SETTINGS["vendor_keywords"] = vendor_keywords
+    if hf_orgs:
+        _SETTINGS["hf_orgs"] = hf_orgs
+    if reddit_subs:
+        _SETTINGS["reddit_subs"] = reddit_subs
 
 
 def _cfg(key):
@@ -145,6 +161,7 @@ _CODELIFE_IDS = {
     "bilibili": "74KvxwokxM",   # 哔哩哔哩热榜
     "wechat_hot": "WnBe01o371", # 微信 24h 热文榜
     "kr36": "Q1Vd5Ko85R",       # 36氪热榜
+    "juejin_ai": "rYqoXz8dOD",  # 掘金·人工智能本周最热
 }
 
 
@@ -388,25 +405,209 @@ def ch_github_trending():
 
 
 # ---------------------------------------------------------------------------
+# 2026-09 新增渠道
+# ---------------------------------------------------------------------------
+
+def _tophub(node_id):
+    """tophub.today 榜单页直解析（条目是直链原文的 <a>）。"""
+    r = _get(f"https://tophub.today/n/{node_id}", timeout=15)
+    items, seen = [], set()
+    for m in re.finditer(r'<td[^>]*><a href="(https?://(?!tophub)[^"]+)"[^>]*>(.*?)</a>',
+                         r.text, re.S):
+        title = htmllib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+        title = re.sub(r"\s+", " ", title)
+        if not title or len(title) < 6 or title in seen:
+            continue
+        seen.add(title)
+        items.append({"title": title, "url": m.group(1), "extra": ""})
+    if not items:
+        raise FetchError("解析为空")
+    return items
+
+
+def ch_toutiao_direct():
+    r = _get("https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc", timeout=12)
+    rows = r.json().get("data") or []
+    items = []
+    for it in rows:
+        title = (it.get("Title") or "").strip()
+        if not title:
+            continue
+        cid = it.get("ClusterIdStr") or it.get("ClusterId")
+        url = it.get("Url") or f"https://www.toutiao.com/trending/{cid}/"
+        hot = it.get("HotValue")
+        items.append({"title": title, "url": url,
+                      "extra": f"热度 {hot}" if hot else ""})
+    if not items:
+        raise FetchError("为空")
+    return items
+
+
+def ch_ithome_rss():
+    return _rss("https://www.ithome.com/rss/")
+
+
+def ch_sspai_rss():
+    return _rss("https://sspai.com/feed", summary_len=50)
+
+
+def ch_baai_tophub():
+    return _tophub("KGoREA2el6")   # 智源社区·最热
+
+
+def ch_hn():
+    r = _get("https://hn.algolia.com/api/v1/search",
+             params={"tags": "front_page", "hitsPerPage": 30}, timeout=15)
+    items = []
+    for hit in r.json().get("hits") or []:
+        title = (hit.get("title") or "").strip()
+        if not title:
+            continue
+        url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID')}"
+        pts = hit.get("points") or 0
+        items.append({"title": title, "url": url, "extra": f"{pts} points"})
+    if not items:
+        raise FetchError("为空")
+    return items
+
+
+def _atom(url):
+    """Atom 订阅源解析（Reddit .rss 是 Atom 格式）。"""
+    r = _get(url, timeout=20)
+    root = ET.fromstring(r.content)
+    items = []
+    for entry in root.iter():
+        if entry.tag.rsplit("}", 1)[-1] != "entry":
+            continue
+        title = link = ""
+        for child in entry:
+            name = child.tag.rsplit("}", 1)[-1]
+            if name == "title":
+                title = (child.text or "").strip()
+            elif name == "link":
+                link = (child.get("href") or "").strip()
+        if title:
+            items.append({"title": htmllib.unescape(title), "url": link, "extra": ""})
+    if not items:
+        raise FetchError("无条目")
+    return items
+
+
+def ch_reddit():
+    merged = []
+    for sub in _cfg("reddit_subs"):
+        # www 被 429 限流时换 old.reddit 域名再试
+        for host in ("www.reddit.com", "old.reddit.com"):
+            try:
+                for it in _atom(f"https://{host}/r/{sub}/hot/.rss?limit=15"):
+                    it["extra"] = f"r/{sub}"
+                    merged.append(it)
+                break
+            except Exception:  # noqa: BLE001 单个 sub 失败不影响其他
+                continue
+    if not merged:
+        raise FetchError("所有 sub 失败")
+    return merged
+
+
+def ch_vendor_blogs():
+    """大厂官方博客：多源合并，单源失败只少一家不阻塞。"""
+    merged = []
+    for brand, url in _cfg("vendor_blogs"):
+        try:
+            for it in _rss(url, summary_len=0)[:5]:
+                it["extra"] = brand
+                merged.append(it)
+        except Exception:  # noqa: BLE001
+            continue
+    if not merged:
+        raise FetchError("所有官博源失败")
+    return merged
+
+
+def ch_vendor_news():
+    """大模型厂商动态：360 资讯搜索按关键词抓取合并。"""
+    seen, items = set(), []
+    for kw in _cfg("vendor_keywords"):
+        got = 0
+        try:
+            r = _get(f"https://news.so.com/ns?q={urllib.parse.quote(kw)}&pn=1", timeout=12)
+        except Exception:  # noqa: BLE001
+            continue
+        for m in re.finditer(r'<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', r.text, re.S):
+            if got >= 4:
+                break
+            url = m.group(1)
+            title = htmllib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+            title = re.sub(r"\s+", " ", title)
+            if not title or len(title) < 15 or title in seen:
+                continue
+            if any(d in url for d in ("so.com", "360.cn", "qihoo.com", "leidian")):
+                continue
+            seen.add(title)
+            items.append({"title": title, "url": url, "extra": kw})
+            got += 1
+    if not items:
+        raise FetchError("无结果")
+    return items
+
+
+def ch_hf_releases():
+    """开源模型发布：监控 HF 上各厂商组织按创建时间最新的模型。"""
+    items = []
+    for org in _cfg("hf_orgs"):
+        try:
+            r = _get("https://huggingface.co/api/models",
+                     params={"author": org, "sort": "createdAt", "direction": -1,
+                             "limit": 5}, timeout=15)
+            for m in r.json() or []:
+                mid = (m.get("id") or "").strip()
+                if not mid:
+                    continue
+                extra = f"{mid.split('/')[0]} · {str(m.get('createdAt') or '')[:10]}"
+                if m.get("downloads"):
+                    extra += f" · {m['downloads']} 下载"
+                items.append({"title": mid.split("/")[-1],
+                              "url": f"https://huggingface.co/{mid}",
+                              "extra": extra, "_ts": str(m.get("createdAt") or "")})
+        except Exception:  # noqa: BLE001
+            continue
+    if not items:
+        raise FetchError("所有 org 失败")
+    items.sort(key=lambda x: x.pop("_ts", ""), reverse=True)
+    return items
+
+
+# ---------------------------------------------------------------------------
 # 源注册表：源名 -> 通道列表（按序兜底）
 # ---------------------------------------------------------------------------
 
 CHANNELS = {
-    # 国内热点
+    # ---- 国内热点 ----
     "yaowen": [ch_yaowen_60s, lambda: _dailyhot("people")],
     "weibo": [ch_weibo_direct, _codelife_factory("weibo"), ch_weibo_60s,
               lambda: _dailyhot("weibo")],
     "zhihu": [ch_zhihu_direct, _codelife_factory("zhihu"),
               lambda: _dailyhot("zhihu")],
     "baidu": [ch_baidu_direct, lambda: _dailyhot("baidu")],
+    "toutiao": [ch_toutiao_direct],
     "douyin": [_codelife_factory("douyin"), lambda: _dailyhot("douyin")],
     "bilibili": [_codelife_factory("bilibili"), lambda: _dailyhot("bilibili")],
     "wechat_hot": [_codelife_factory("wechat_hot")],
-    # AI 圈
+    "ithome": [ch_ithome_rss],
+    "sspai": [ch_sspai_rss],
+    "kr36": [_codelife_factory("kr36")],
+    # ---- AI 圈 ----
     "qbitai": [ch_qbitai_rss],
     "aibase": [ch_aibase_daily, ch_aibase_news],
-    "kr36": [_codelife_factory("kr36")],
+    "vendor_blogs": [ch_vendor_blogs],
     "hf_papers": [ch_hf_papers],
+    "hf_releases": [ch_hf_releases],
+    "vendor_news": [ch_vendor_news],
+    "hn": [ch_hn],
+    "reddit": [ch_reddit],
+    "baai": [ch_baai_tophub],
+    "juejin_ai": [_codelife_factory("juejin_ai")],
     "github_trending": [ch_github_trending],
     # 依赖海外实例，国内环境常不可达（默认关闭，留着做云端备用）
     "jiqizhixin": [lambda: _dailyhot("jiqizhixin")],
