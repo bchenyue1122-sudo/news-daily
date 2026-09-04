@@ -18,6 +18,12 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
+# Windows 下输出被重定向到文件时默认 GBK 编码，日志里的 emoji 会导致
+# UnicodeEncodeError 崩溃（2026-09-04 实际发生），统一改为 UTF-8
+for _stream in (sys.stdout, sys.stderr):
+    if _stream is not None and hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR / "src"))
 
