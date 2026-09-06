@@ -17,6 +17,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import yaml
+import requests
 
 # Windows 下输出被重定向到文件时默认 GBK 编码，日志里的 emoji 会导致
 # UnicodeEncodeError 崩溃（2026-09-04 实际发生），统一改为 UTF-8
@@ -63,6 +64,22 @@ def load_env(path: Path):
 
 def log(msg):
     print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
+
+
+def wait_for_network(max_wait=240):
+    """唤醒后网络可能未就绪（休眠恢复/Wi-Fi 重连），最多等 max_wait 秒。"""
+    import time as _t
+    waited = 0
+    while waited < max_wait:
+        try:
+            requests.head("https://www.baidu.com", timeout=5)
+            if waited:
+                log(f"网络就绪（等待了 {waited} 秒）。")
+            return
+        except Exception:  # noqa: BLE001
+            _t.sleep(10)
+            waited += 10
+    log(f"⚠️  等待网络 {max_wait} 秒仍未就绪，继续尝试执行。")
 
 
 def fetch_all(order, sources_cfg):
@@ -230,6 +247,9 @@ def main():
     fetchers.configure(cfg.get("dailyhot_instances"), cfg.get("sixty_instances"),
                        cfg.get("vendor_keywords"), cfg.get("hf_orgs"),
                        cfg.get("reddit_subs"))
+
+    if not args.dry_run:
+        wait_for_network()
 
     now = datetime.now(ZoneInfo(cfg.get("timezone", "Asia/Shanghai")))
 
