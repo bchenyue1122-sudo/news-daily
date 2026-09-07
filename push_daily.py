@@ -133,7 +133,8 @@ def publish_git(date_str, branch):
 
     run("add", "docs")
     commit = run("commit", "-m", f"daily {date_str}")
-    if commit.returncode != 0 and "nothing to commit" not in commit.stdout:
+    if commit.returncode != 0 and not any(
+            k in commit.stdout for k in ("nothing to commit", "no changes added")):
         return False, f"commit 失败: {commit.stdout} {commit.stderr}"
 
     # 两轮 × 两种模式：默认配置（走代理）→ 直连绕过本地代理
