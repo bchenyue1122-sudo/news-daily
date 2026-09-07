@@ -114,10 +114,17 @@ def fetch_all(order, sources_cfg):
 
 
 def publish_git(date_str, branch):
-    """git 提交并推送 docs/ 目录。返回 (ok, 输出信息)。"""
-    def run(*args):
-        return subprocess.run(["git", *args], cwd=BASE_DIR, capture_output=True,
-                              text=True, encoding="utf-8", errors="replace")
+    """git 提交并推送 docs/ 目录。返回 (ok, 输出信息)。
+
+    若用户 git 配置了本地代理（如 127.0.0.1:10808）而唤醒时代理软件未运行，
+    连接会被拒；此时自动改为直连重试。
+    """
+    import time as _t
+
+    def run(*args, extra=()):
+        return subprocess.run(["git", *extra, *args], cwd=BASE_DIR,
+                              capture_output=True, text=True,
+                              encoding="utf-8", errors="replace")
 
     # Actions 的 checkout 环境没有 git 身份，未配置时用机器人身份补上
     if not run("config", "user.email").stdout.strip():
@@ -128,15 +135,26 @@ def publish_git(date_str, branch):
     commit = run("commit", "-m", f"daily {date_str}")
     if commit.returncode != 0 and "nothing to commit" not in commit.stdout:
         return False, f"commit 失败: {commit.stdout} {commit.stderr}"
-    # 远端可能刚被另一条流水线/另一触发端推过，先 rebase 再推
-    for attempt in range(3):
-        pull = run("pull", "--rebase", "-q", "origin", branch)
-        if pull.returncode != 0:
-            return False, f"pull 失败: {pull.stderr.strip()[:200]}"
-        push = run("push", "origin", branch)
-        if push.returncode == 0:
-            return True, "pushed"
-    return False, f"push 失败: {push.stderr.strip()[:200]}"
+
+    # 两轮 × 两种模式：默认配置（走代理）→ 直连绕过本地代理
+    modes = [
+        ("默认", ()),
+        ("直连", ("-c", "http.proxy=", "-c", "https.proxy=")),
+    ]
+    last_err = ""
+    for rnd in range(2):
+        for label, extra in modes:
+            pull = run("pull", "--rebase", "-q", "origin", branch, extra=extra)
+            if pull.returncode != 0:
+                last_err = f"pull 失败({label}): {pull.stderr.strip()[:150]}"
+                continue
+            push = run("push", "origin", branch, extra=extra)
+            if push.returncode == 0:
+                return True, f"pushed ({label})"
+            last_err = f"push 失败({label}): {push.stderr.strip()[:150]}"
+        if rnd == 0:
+            _t.sleep(30)   # 给刚唤醒的代理软件一点启动时间，再试一轮
+    return False, last_err
 
 
 def run_pipeline(key, cfg, now, *, dry_run=False, force=False, no_git=False,
